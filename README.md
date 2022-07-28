@@ -1,5 +1,5 @@
 # Laradrive
-Google Drive REST API Wrapper For Laravel and Lumen
+Google Drive REST API Wrapper For Laravel and Lumen. Forked from arcphysx/laradrive (https://github.com/arcphysx/laradrive)
 
 ## Installation
 You can install the package using composer
@@ -25,10 +25,10 @@ GOOGLE_DRIVE_AUTH_TOKEN_STORAGE_PATH="app/google_auth_token.json"
 GOOGLE_DRIVE_CREDENTIAL_STORAGE_PATH="credentials.json"
 ```
 
-By default, laradrive will use your `storage` to store your Google Authentication Info 
+By default, laradrive will use your `storage` to store your Google Authentication Info
 
 You can publish the configuration file and assets by running:
- 
+
 ```sh
 $ php artisan vendor:publish --provider="Arcphysx\Laradrive\Providers\LaradriveServiceProvider"
 ```
