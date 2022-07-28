@@ -4,7 +4,7 @@ Google Drive REST API Wrapper For Laravel and Lumen. Forked from arcphysx/laradr
 ## Installation
 You can install the package using composer
 ```sh
-$ composer require arcphysx/laradrive
+$ composer require bawahtanah/laradrive
 ```
 Then add the service provider to `config/app.php`. In Laravel versions 5.5 and beyond, this step can be skipped if package auto-discovery is enabled.
 
