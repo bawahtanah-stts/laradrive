@@ -1,5 +1,5 @@
 {
-    "name": "arcphysx/laradrive",
+    "name": "bawahtanah/laradrive",
     "description": "Google Drive REST API Wrapper For Laravel and Lumen",
     "type": "library",
     "require": {
