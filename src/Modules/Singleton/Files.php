@@ -5,41 +5,43 @@ namespace Arcphysx\Laradrive\Modules\Singleton;
 use Arcphysx\Laradrive\Laradrive;
 use Arcphysx\Laradrive\Modules\Contract\HttpClientModuleContract;
 use Arcphysx\Laradrive\Modules\Wrapper\ResponseWrapper;
-use Illuminate\Support\Facades\Hash;
+use GuzzleHttp\Psr7\Utils; // Menggunakan GuzzleHttp\Psr7\Utils
 
 class Files implements HttpClientModuleContract
 {
-    // https://stackoverflow.com/questions/60797372/how-can-i-get-share-link-from-google-drive-rest-api-v3
+    private static ?Files $INSTANCE = null;
 
-    private static $INSTANCE = null;
-
-    private function __construct(){
+    private function __construct()
+    {
         //
     }
 
-    public static function _get()
+    public static function _get(): Files
     {
-        if(self::$INSTANCE == null){
-            self::$INSTANCE = new Files();
+        if (self::$INSTANCE === null) {
+            self::$INSTANCE = new self();
         }
         return self::$INSTANCE;
     }
 
-    public function list($folderId=null, $query = null)
+    public function list($folderId = null, $query = null)
     {
-        if(isset($folderId) && isset($query)){
-            $query = "'$folderId' in parents and $query";
-        }elseif(isset($folderId) && !isset($query)){
-            $query = "'$folderId' in parents";
-        }elseif(!isset($folderId) && isset($query)){
-            $query = $query;
-        }else{
-            $query = "";
+        $queries = [];
+
+        if ($folderId) {
+            $queries[] = "'$folderId' in parents";
         }
+
+        if ($query) {
+            $queries[] = $query;
+        }
+
+        $q = implode(' and ', $queries);
 
         $response = Laradrive::httpClient()->get("files", [
             'query' => [
-                'q' => $query
+                'q' => $q,
+                'fields' => 'nextPageToken, files(id, name, mimeType, parents)'
             ]
         ]);
 
@@ -64,33 +66,34 @@ class Files implements HttpClientModuleContract
         return ResponseWrapper::parse($response);
     }
 
-    public function upload($filename, $mimeType, $file, $parentId, $uploadType="multipart")
+    public function upload($filename, $mimeType, $file, $parentId, $uploadType = "multipart")
     {
-        // https://stackoverflow.com/questions/60837047/how-can-i-upload-files-to-googledrive-in-multipart-type-by-using-guzzle
-
-        $boundary = md5(mt_rand() . microtime());
         $metadata = json_encode([
             'name' => $filename,
             'mimeType' => $mimeType,
-            'parents' => [ $parentId ],
+            'parents' => [$parentId],
         ]);
 
-        $dataToUpload = "--{$boundary}\r\n";
-        $dataToUpload .= "Content-Type: application/json\r\n\r\n";
-        $dataToUpload .= "{$metadata}\r\n";
-        $dataToUpload .= "--{$boundary}\r\n";
-        $dataToUpload .= "Content-Transfer-Encoding: base64\r\n\r\n";
-        $dataToUpload .= base64_encode($file) . "\r\n";
-        $dataToUpload .= "--{$boundary}--";
-
-        $response = Laradrive::httpClient(true)->post("files", [
-            'headers' => [
-                'Content-Type' => 'multipart/related; boundary=' . $boundary,
-            ],
+        $response = Laradrive::httpClient()->post("https://www.googleapis.com/upload/drive/v3/files", [
             'query' => [
                 'uploadType' => $uploadType
             ],
-            'body' => $dataToUpload,
+            'multipart' => [
+                [
+                    'name' => 'metadata',
+                    'contents' => $metadata,
+                    'headers' => [
+                        'Content-Type' => 'application/json; charset=UTF-8'
+                    ]
+                ],
+                [
+                    'name' => 'file',
+                    'contents' => $file,
+                    'headers' => [
+                        'Content-Type' => $mimeType
+                    ]
+                ]
+            ]
         ]);
 
         return ResponseWrapper::parse($response);
@@ -108,30 +111,29 @@ class Files implements HttpClientModuleContract
     public function copy($fileId, $destinationId, $name = null)
     {
         $body = [
-            'json' => [
-                'parents' => [
-                    $destinationId
-                ]
-            ],
+            'parents' => [$destinationId]
         ];
-        if($name !== null){
-            $body["json"]["name"] = $name;
+
+        if ($name !== null) {
+            $body["name"] = $name;
         }
-        
-        $response = Laradrive::httpClient()->post("files/$fileId/copy", $body);
+
+        $response = Laradrive::httpClient()->post("files/$fileId/copy", [
+            'json' => $body
+        ]);
 
         return ResponseWrapper::parse($response);
     }
-    
+
     public function rename($fileId, $name)
     {
         $body = [
-            'json' => [
-                'name' => $name,
-            ],
+            'name' => $name,
         ];
 
-        $response = Laradrive::httpClient()->patch("files/$fileId", $body);
+        $response = Laradrive::httpClient()->patch("files/$fileId", [
+            'json' => $body
+        ]);
 
         return ResponseWrapper::parse($response);
     }
